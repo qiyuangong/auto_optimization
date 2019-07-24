@@ -17,13 +17,11 @@ usage()
             subset \\
             /the/output/directory \\
             /path/to/the/calibration_tool
-    exit 1
+    exit 1"
 }
 
-if [ -d "/opt/intel" ]
-then 
-    CALIBRATION_FILE=`find /opt/intel -name 'calibration_tool' -print | head -n 1`
-else [ -d "/home/$USER/intel" ]
+if [ -d "/home/$USER" ]
+then
     CALIBRATION_FILE=`find /home/$USER -name 'calibration_tool' -print | head -n 1`
 fi
 
