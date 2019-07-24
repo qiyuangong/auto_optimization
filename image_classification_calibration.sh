@@ -16,44 +16,60 @@ usage()
             /path/to/the/validation/file \\
             subset \\
             /the/output/directory \\
-            /path/to/the/calibration_tool
-    exit 1"
+            /path/to/the/calibration_tool"
+    exit 1
 }
 
-if [ -d "/home/$USER" ]
+if [ -d "$HOME/inference_engine_samples_build/intel64/Release" ]
 then
-    CALIBRATION_FILE=`find /home/$USER -name 'calibration_tool' -print | head -n 1`
+    CALIBRATION_FILE="$HOME/inference_engine_samples_build/intel64/Release/calibration_tool"
 fi
 
-if [-z "$CALIBRATION_FILE"]
+if [ -z "$CALIBRATION_FILE" ] && [ -z "$5" ]
 then
-    echo "WARNING: Cannot find calibration_tool in default install path"
+    echo "Error: Cannot find calibration_tool in default install path"
+    exit
 fi
 
 SUBSET=0
 
-if [ "$#" < 2 ] || [ "$#" -gt 5 ]
+if [ "$#" -lt 2 ] || [ "$#" -gt 5 ]
 then
     usage
+    exit
 else
     MODEL_XML="$1"
     VALIDATION_FILE="$2"
+fi
+
+if [ ! -z "$3" ]
+then
     SUBSET="$3"
+fi
+
+if [ ! -z "$4" ]
+then
     OUTPUT_DIR="$4"
+fi
+
+if [ ! -z "$5" ] && [ -z "$CALIBRATION_FILE" ]
+then
     CALIBRATION_FILE="$5"
 fi
 
+echo "Using ${CALIBRATION_FILE}"
+
+CMD="-t C -m ${MODEL_XML} -i ${VALIDATION_FILE}"
+
 # Set default subset number
-if [ "$SUBSET" == 0 ]
+if [ "$SUBSET" -gt 0 ]
 then 
-    SUBSET=`wc -l $VALIDATION_FILE`
+    CMD="${CMD} -subset ${SUBSET}"
 fi
 
-echo ${CALIBRATION_FILE}
+if [ ! -z "$OUTPUT_DIR" ]
+then
+    CMD="${CMD} -output ${OUTPUT_DIR}"
+fi
 
-${CALIBRATION_FILE} \
-    -m ${MODEL_XML} \
-    -i ${VALIDATION_FILE} \
-    -subset ${SUBSET} \
-    -output ${OUTPUT_DIR} \
-    -t "C"
+${CALIBRATION_FILE} ${CMD}
