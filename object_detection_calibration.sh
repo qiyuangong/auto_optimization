@@ -20,41 +20,80 @@ usage()
     exit 1"
 }
 
-if [-z "$CALIBRATION_FILE"]
+if [ -d "$HOME/inference_engine_samples_build/intel64/Release" ]
 then
-    echo "WARNING: Cannot find calibration_tool in default install path"
+    CALIBRATION_FILE="$HOME/inference_engine_samples_build/intel64/Release/calibration_tool"
+fi
+
+if [ -z "$CALIBRATION_FILE" ] && [ -z "$5" ]
+then
+    echo "Error: Cannot find calibration_tool in default install path"
+    exit
 fi
 
 SUBSET=0
 
-if [ "$#" < 2 ] || [ "$#" -gt 5 ]
+if [ "$#" -lt 2 ] || [ "$#" -gt 5 ]
 then
     usage
+    exit
 else
     MODEL_XML="$1"
     VALIDATION_FILE="$2"
+fi
+
+if [ -d "${VALIDATION_FILE}/anno" ]
+then
+    rm -r "${VALIDATION_FILE}/anno"
+fi
+
+mkdir -p "${VALIDATION_FILE}/anno"
+find "${VALIDATION_FILE}" -type f | grep -i xml$ | xargs -i cp {} "${VALIDATION_FILE}/anno"
+
+if [ -d "${VALIDATION_FILE}/images" ]
+then
+    rm -r "${VALIDATION_FILE}/images"
+fi
+
+mkdir -p "$VALIDATION_FILE/images"
+find "${VALIDATION_FILE}" -type f | grep -i JPEG$ | xargs -i cp {} "${VALIDATION_FILE}/images"
+find "${VALIDATION_FILE}" -type f | grep -i jpeg$ | xargs -i cp {} "${VALIDATION_FILE}/images"
+find "${VALIDATION_FILE}" -type f | grep -i JPG$ | xargs -i cp {} "$VALIDATION_FILE/images"
+find "${VALIDATION_FILE}" -type f | grep -i jpg$ | xargs -i cp {} "$VALIDATION_FILE/images"
+find "${VALIDATION_FILE}" -type f | grep -i bmp$ | xargs -i cp {} "$VALIDATION_FILE/images"
+find "${VALIDATION_FILE}" -type f | grep -i png$ | xargs -i cp {} "$VALIDATION_FILE/images"
+
+
+ODC=`find $VALIDATION_FILE -name '*.txt' -print | head -n 1`
+
+if [ ! -z "$3" ]
+then
     SUBSET="$3"
+fi
+
+if [ ! -z "$4" ]
+then
     OUTPUT_DIR="$4"
+fi
+
+if [ ! -z "$5" ] && [ -z "$CALIBRATION_FILE" ]
+then
     CALIBRATION_FILE="$5"
 fi
 
-mkdir -p "$VALIDATION_FILE/anno"
-mv "$VALIDATION_FILE/*.xml" "$VALIDATION_FILE/anno"
-ODC=`find $VALIDATION_FILE -name '*.txt' -print | head -n 1`
+echo "Using ${CALIBRATION_FILE}"
+
+CMD="-t OD -m ${MODEL_XML} -i ${VALIDATION_FILE}/images -ODa ${VALIDATION_FILE}/anno -ODc ${ODC}"
 
 # Set default subset number
-if [ "$SUBSET" == 0 ]
+if [ "$SUBSET" -gt 0 ]
 then 
-    SUBSET=`wc -l $VALIDATION_FILE`
+    CMD="${CMD} -subset ${SUBSET}"
 fi
 
-echo ${CALIBRATION_FILE}
+if [ ! -z "$OUTPUT_DIR" ]
+then
+    CMD="${CMD} -output ${OUTPUT_DIR}"
+fi
 
-${CALIBRATION_FILE} \
-    -m ${MODEL_XML} \
-    -i ${VALIDATION_FILE} \
-    -subset ${SUBSET} \
-    -output ${OUTPUT_DIR} \
-    -t "OD"
-    -ODc $ODC
-    -ODa "$VALIDATION_FILE/anno"
+${CALIBRATION_FILE} ${CMD}
