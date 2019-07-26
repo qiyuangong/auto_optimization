@@ -5,21 +5,38 @@ import sys
 import os
 import argparse
 import subprocess
+import re
 
 
-OBJECT_DETECTION  = []
+OBJECT_DETECTION  = ["fastrcnn", "rfcn" "fasterrcnn", "ssd" "maskrcnn", "yolo"]
 
 
 def get_calibration_tool_path():
-    if os.path.exists("/opt/intel"):
-        calibration_tool = os.path.abspath
-    return calibration_tool
+    # Search "/opt/intel/openvino" and home dir
+    for path in ["/opt/intel/openvino", os.path.expanduser("~")]:
+        res = find_file("calibration_tool", path)
+        if res:
+            return res
+
+
+def find_file(name, path):
+    if not os.path.exists(path):
+        return None
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root, name)
 
 
 def get_model_type(model_path):
+    regex = re.compile('[^a-zA-Z]')
+    alpha_path = regex.sub('', model_path)
+    for od_model in OBJECT_DETECTION:
+        if od_model in alpha_path:
+            return "OD"
     return "C"
 
-def filter_annotations_out(image_path):
+
+def object_detection_val_prepare(image_path):
     return ""
 
 
@@ -49,7 +66,10 @@ if __name__ == '__main__':
     if args.type is None:
         model_type = get_model_type(args.model)
     cmd_string = "%s -m %s -i %s -t %s" % (tool_path, args.model, args.input, model_type)
-    
-
-
+    if model_type == "OD":
+        # TODO
+        object_detection_val_prepare(args.input)
+    else:
+        # TODO
+        cmd_string += "XXX"
     subprocess.call(cmd_string, shell=True)
