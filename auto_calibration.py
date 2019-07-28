@@ -6,9 +6,12 @@ import os
 import argparse
 import subprocess
 import re
+import shutil
+import imghdr
 
 
 OBJECT_DETECTION  = ["fastrcnn", "rfcn" "fasterrcnn", "ssd" "maskrcnn", "yolo"]
+IMAGE_EXTENSIONS = []
 
 
 def get_calibration_tool_path():
@@ -17,6 +20,8 @@ def get_calibration_tool_path():
         res = find_file("calibration_tool", path)
         if res:
             return res
+    # current
+    raise Exception("ERROR: cannot find calibration_tool from deafult path")
 
 
 def find_file(name, path):
@@ -37,7 +42,31 @@ def get_model_type(model_path):
 
 
 def object_detection_val_prepare(image_path):
-    return ""
+    """
+    """
+    # Create anno and image dir
+    val_image_path = os.path.join(image_path, "image")
+    val_anno_path = os.path.join(image_path, "anno")
+    val_txt = ""
+    if os.path.exists(val_image_path):
+        shutil.rmtree(val_image_path)
+    if os.path.exists(val_anno_path):
+        shutil.rmtree(val_anno_path)
+    os.mkdir(val_image_path)
+    os.mkdir(val_anno_path)
+    for f in os.listdir(image_path):
+        curr_path = os.path.join(image_path, f)
+        if os.path.isfile(curr_path):
+            continue
+        # Move *.xml to anno
+        if curr_path.endswith("xml"):
+            shutil.copy(curr_path, val_anno_path)
+        # Move images to image
+        elif imghdr.what(curr_path) is not None:
+            shutil.copy(curr_path, val_image_path)
+        elif curr_path.endswith("txt"):
+            val_txt = curr_path
+    return val_image_path, val_anno_path, val_txt
 
 
 if __name__ == '__main__':
@@ -57,19 +86,21 @@ if __name__ == '__main__':
         OD to calibrate Object Detection network and write the calibrated network to IR\
         RawC to collect only statistics for Classification network and write statistics to IR. With this option, a model is not calibrated.\
         RawOD to collect only statistics for Object Detection network and write statistics to IR.")
-    
+
     args = parser.parse_args()
-    
+
     tool_path = get_calibration_tool_path()
 
     model_type = "C"
     if args.type is None:
         model_type = get_model_type(args.model)
-    cmd_string = "%s -m %s -i %s -t %s" % (tool_path, args.model, args.input, model_type)
+    cmd_string = "%s -m %s -i %s -t %s" % (tool_path,
+                                           args.model, args.input, model_type)
     if model_type == "OD":
         # TODO
         object_detection_val_prepare(args.input)
     else:
         # TODO
         cmd_string += "XXX"
+    # run command
     subprocess.call(cmd_string, shell=True)
