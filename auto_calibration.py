@@ -10,7 +10,7 @@ import shutil
 import imghdr
 
 
-OBJECT_DETECTION  = ["fastrcnn", "rfcn" "fasterrcnn", "ssd" "maskrcnn", "yolo"]
+OBJECT_DETECTION  = ["fastrcnn", "rfcn" "fasterrcnn", "ssd", "maskrcnn", "yolo"]
 IMAGE_EXTENSIONS = []
 
 
@@ -34,18 +34,38 @@ def find_file(name, path):
 
 def get_model_type(model_path):
     regex = re.compile('[^a-zA-Z]')
-    alpha_path = regex.sub('', model_path)
+    alpha_path = regex.sub('', model_path).lower()
     for od_model in OBJECT_DETECTION:
         if od_model in alpha_path:
             return "OD"
     return "C"
 
 
+def image_classification_val_prepare(image_path):
+    """
+    Prepare image classification val dir
+    find val.txt in dir and return its path
+    or current dir path
+    """
+    if os.path.exists(image_path) and image_path.endswith("txt"):
+        return image_path
+    for f in os.listdir(image_path):
+        curr_path = os.path.join(image_path, f)
+        if os.path.isdir(curr_path):
+            continue
+        if curr_path.endswith("txt"):
+            return curr_path
+    return image_path
+
+
 def object_detection_val_prepare(image_path):
     """
+    Prepare object detection val dir
+    copy *.xml into anno subdir
+    copy images (*.png etc) into image subdir
     """
     # Create anno and image dir
-    val_image_path = os.path.join(image_path, "image")
+    val_image_path = os.path.join(image_path, "images")
     val_anno_path = os.path.join(image_path, "anno")
     val_txt = ""
     if os.path.exists(val_image_path):
@@ -56,7 +76,7 @@ def object_detection_val_prepare(image_path):
     os.mkdir(val_anno_path)
     for f in os.listdir(image_path):
         curr_path = os.path.join(image_path, f)
-        if os.path.isfile(curr_path):
+        if os.path.isdir(curr_path):
             continue
         # Move *.xml to anno
         if curr_path.endswith("xml"):
@@ -66,7 +86,7 @@ def object_detection_val_prepare(image_path):
             shutil.copy(curr_path, val_image_path)
         elif curr_path.endswith("txt"):
             val_txt = curr_path
-    return val_image_path, val_anno_path, val_txt
+    return (val_image_path, val_anno_path, val_txt)
 
 
 if __name__ == '__main__':
@@ -94,13 +114,13 @@ if __name__ == '__main__':
     model_type = "C"
     if args.type is None:
         model_type = get_model_type(args.model)
-    cmd_string = "%s -m %s -i %s -t %s" % (tool_path,
-                                           args.model, args.input, model_type)
+    cmd_string = "%s -m %s -t %s" % (tool_path,
+                                           args.model, model_type)
     if model_type == "OD":
         # TODO
-        object_detection_val_prepare(args.input)
+        cmd_string += " -i %s -ODa %s -ODc %s" % object_detection_val_prepare(args.input)
     else:
-        # TODO
-        cmd_string += "XXX"
+        cmd_string += " -i %s" % image_classification_val_prepare(args.input)
     # run command
     subprocess.call(cmd_string, shell=True)
+    print(cmd_string)
