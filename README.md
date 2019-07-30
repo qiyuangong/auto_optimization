@@ -6,6 +6,10 @@ OpenVINO automatic optimization and caliberation. Actually, auto-convert and aut
 1. Python & TensorFlow
 2. OpenVINO
 
+## Auto Calibration
+Assume you have OpenVINO IR model (converted from Caffe or TensorFlow), and you want to convert it into `int8` model. Herein OpenVINO `int8` IR promises higher performance than IR model by wsacrificing a few precision (1% by default).
+
+
 
 
 ## References

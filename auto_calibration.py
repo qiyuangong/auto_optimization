@@ -106,21 +106,32 @@ if __name__ == '__main__':
         OD to calibrate Object Detection network and write the calibrated network to IR\
         RawC to collect only statistics for Classification network and write statistics to IR. With this option, a model is not calibrated.\
         RawOD to collect only statistics for Object Detection network and write statistics to IR.")
+    parser.add_argument('--threshold', help="Threshold for a maximum accuracy drop of \
+        quantized model. Must be an integer number (percents) without a percent sign. \
+            Default value is 1, which stands for accepted accuracy drop in 1%", default=1)
 
     args = parser.parse_args()
 
+    # Find calibration_tool abs path
     tool_path = get_calibration_tool_path()
-
+    # Check model type (parser from file path)
     model_type = "C"
     if args.type is None:
         model_type = get_model_type(args.model)
     cmd_string = "%s -m %s -t %s" % (tool_path,
                                            args.model, model_type)
+    # Handle validation dataset
     if model_type == "OD":
         # TODO
         cmd_string += " -i %s -ODa %s -ODc %s" % object_detection_val_prepare(args.input)
     else:
         cmd_string += " -i %s" % image_classification_val_prepare(args.input)
+    # Thredshold
+    if args.threshold != 1 and args.threshold > 0:
+        cmd_string += " -threshold %d" % args.threshold
+    # Subset
+    if args.subset != 1 and args.subset > 0:
+        cmd_string += " -subset %d" % args.subset
+    print(cmd_string)
     # run command
     subprocess.call(cmd_string, shell=True)
-    print(cmd_string)
