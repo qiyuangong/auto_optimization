@@ -1,4 +1,7 @@
 # OpenVINO
+This repo has been merged into [Analytics-Zoo](https://github.com/intel-analytics/analytics-zoo). 
+
+Analytics Zoo provides a unified analytics + AI platform that seamlessly unites Spark, TensorFlow, Keras, BigDL and OpenVINO programs into an integrated pipeline; the entire pipeline can then transparently scale out to a large Hadoop/Spark cluster for distributed training or inference.
 
 ## Basic Requirements
 1. Python & TensorFlow
